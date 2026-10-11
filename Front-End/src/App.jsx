@@ -10,21 +10,21 @@ function App() {
       <div className="app-container">
         {/* Sidebar */}
         <aside className="sidebar">
-          <h2>📝 Smart Notes</h2>
+          <h2>Quản lý ghi chú</h2>
           <ul>
             <li>
               <NavLink to="/" className={({ isActive }) => isActive ? "active" : ""}>
-                📌 Ghi chú công khai
+                Ghi chú công khai
               </NavLink>
             </li>
             <li>
               <NavLink to="/private" className={({ isActive }) => isActive ? "active" : ""}>
-                🔒 Vùng riêng tư
+                Vùng riêng tư
               </NavLink>
             </li>
             <li>
               <NavLink to="/settings" className={({ isActive }) => isActive ? "active" : ""}>
-                ⚙️ Cài đặt hệ thống
+                Cài đặt hệ thống
               </NavLink>
             </li>
           </ul>

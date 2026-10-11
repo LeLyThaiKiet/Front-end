@@ -11,32 +11,36 @@ const profilePath = path.join(__dirname, 'data', 'profile.json');
 const notesDir = path.join(__dirname, 'data', 'notes');
 const privateNotesFile = path.join(__dirname, 'data', 'private.json');
 
-// Khởi tạo thư mục và file tự động nếu chưa có
 if (!fs.existsSync(notesDir)) {
     fs.mkdirSync(notesDir, { recursive: true });
 }
 if (!fs.existsSync(privateNotesFile)) {
     fs.writeFileSync(privateNotesFile, '[]', 'utf8');
 }
+
+// Khởi tạo profile mặc định có kèm danh mục và màu sắc
+const defaultProfile = {
+    displayName: "Sinh viên",
+    theme: "light",
+    primaryColor: "#2563eb",
+    categories: ["hoc-tap", "cong-viec", "ca-nhan"],
+    password: ""
+};
+
 if (!fs.existsSync(profilePath)) {
-    fs.writeFileSync(profilePath, JSON.stringify({ displayName: "Sinh viên", theme: "light", password: "" }, null, 2), 'utf8');
+    fs.writeFileSync(profilePath, JSON.stringify(defaultProfile, null, 2), 'utf8');
 }
 
 const getFilePath = (topic) => path.join(notesDir, `${topic}.json`);
 
-// ================= 1. API PROFILE (Đã bọc chống lỗi 500) =================
+// 1. API Profile
 app.get('/api/profile', (req, res) => {
     try {
-        if (!fs.existsSync(profilePath)) {
-            return res.json({ displayName: "Sinh viên", theme: "light", password: "" });
-        }
         const rawData = fs.readFileSync(profilePath, 'utf8');
-        if (!rawData.trim()) {
-            return res.json({ displayName: "Sinh viên", theme: "light", password: "" });
-        }
+        if (!rawData.trim()) return res.json(defaultProfile);
         res.json(JSON.parse(rawData));
     } catch (error) {
-        res.json({ displayName: "Sinh viên", theme: "light", password: "" });
+        res.json(defaultProfile);
     }
 });
 
@@ -44,13 +48,13 @@ app.put('/api/profile', (req, res) => {
     try {
         const newProfile = req.body;
         fs.writeFileSync(profilePath, JSON.stringify(newProfile, null, 2), 'utf8');
-        res.json({ success: true, message: "Đã cập nhật Profile" });
+        res.json({ success: true, message: "Đã cập nhật Profile thành công" });
     } catch (error) {
         res.status(500).json({ message: "Lỗi ghi file profile" });
     }
 });
 
-// ================= 2. API GHI CHÚ CÔNG KHAI (Đã bọc chống lỗi 500) =================
+// 2. API Ghi chú công khai (CRUD)
 app.get('/api/notes/:topic', (req, res) => {
     const filePath = getFilePath(req.params.topic);
     try {
@@ -59,7 +63,7 @@ app.get('/api/notes/:topic', (req, res) => {
         if (!data.trim()) return res.json([]);
         res.json(JSON.parse(data));
     } catch (error) {
-        res.json([]); // Trả về mảng rỗng thay vì làm sập server
+        res.json([]);
     }
 });
 
@@ -69,9 +73,7 @@ app.post('/api/notes/:topic', (req, res) => {
         let notes = [];
         if (fs.existsSync(filePath)) {
             const fileData = fs.readFileSync(filePath, 'utf8');
-            if (fileData.trim()) {
-                notes = JSON.parse(fileData);
-            }
+            if (fileData.trim()) notes = JSON.parse(fileData);
         }
         const newNote = {
             id: Date.now().toString(),
@@ -118,12 +120,9 @@ app.delete('/api/notes/:topic/:id', (req, res) => {
     }
 });
 
-// ================= 3. API BẢO MẬT & GHI CHÚ RIÊNG TƯ =================
+// 3. API Vùng kín & Xác thực
 app.post('/api/private/auth', (req, res) => {
     try {
-        if (!fs.existsSync(profilePath)) {
-            return res.status(401).json({ success: false, message: "Chưa thiết lập mật khẩu!" });
-        }
         const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
         if (profile.password === req.body.password) {
             res.json({ success: true });

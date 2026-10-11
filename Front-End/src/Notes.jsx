@@ -1,12 +1,29 @@
 import React, { useState, useEffect } from 'react';
 
 function Notes() {
+    const [categories, setCategories] = useState(['hoc-tap', 'cong-viec', 'ca-nhan']);
     const [topic, setTopic] = useState('hoc-tap');
     const [notes, setNotes] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [formData, setFormData] = useState({ id: null, title: '', content: '' });
 
+    // Lấy danh mục từ profile khi vừa tải trang
+    useEffect(() => {
+        fetch('http://localhost:5000/api/profile')
+            .then(res => res.json())
+            .then(data => {
+                if (data.categories && data.categories.length > 0) {
+                    setCategories(data.categories);
+                    setTopic(data.categories[0]);
+                }
+                if (data.primaryColor) {
+                    document.documentElement.style.setProperty('--primary-color', data.primaryColor);
+                }
+            });
+    }, []);
+
     const fetchNotes = () => {
+        if (!topic) return;
         fetch(`http://localhost:5000/api/notes/${topic}`)
             .then(res => res.json())
             .then(data => setNotes(Array.isArray(data) ? data : []))
@@ -14,8 +31,10 @@ function Notes() {
     };
 
     useEffect(() => { 
-        fetchNotes(); 
-        setFormData({ id: null, title: '', content: '' });
+        if (topic) {
+            fetchNotes(); 
+            setFormData({ id: null, title: '', content: '' });
+        }
     }, [topic]);
 
     const handleSave = () => {
@@ -53,7 +72,6 @@ function Notes() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Lọc ghi chú theo từ khóa tìm kiếm[cite: 34]
     const filteredNotes = notes.filter(note => 
         note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         note.content.toLowerCase().includes(searchTerm.toLowerCase())
@@ -62,34 +80,31 @@ function Notes() {
     return (
         <div>
             <div className="page-header">
-                <h2>📌 Quản lý Ghi chú Công khai</h2>
+                <h2>Quản lý Ghi chú Công khai</h2>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                    {/* Thanh tìm kiếm */}
                     <input 
                         className="input-field" 
                         style={{ margin: 0, width: '220px' }} 
-                        placeholder="🔍 Tìm kiếm ghi chú..." 
+                        placeholder="Tìm kiếm ghi chú..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                    {/* Chọn chủ đề */}
                     <select 
                         className="select-field" 
                         style={{ margin: 0, width: '160px' }} 
                         value={topic} 
                         onChange={(e) => setTopic(e.target.value)}
                     >
-                        <option value="hoc-tap">🎓 Học tập</option>
-                        <option value="cong-viec">💼 Công việc</option>
-                        <option value="ca-nhan">👤 Cá nhân</option>
+                        {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
                     </select>
                 </div>
             </div>
 
-            {/* Form Thêm / Sửa Ghi chú */}
             <div className="card-form">
                 <h3 style={{ marginBottom: '16px', color: '#1e293b' }}>
-                    {formData.id ? '✏️ Cập nhật ghi chú' : '➕ Thêm ghi chú mới'}
+                    {formData.id ? 'Cập nhật ghi chú' : 'Thêm ghi chú mới'}
                 </h3>
                 <input 
                     className="input-field"
@@ -116,11 +131,10 @@ function Notes() {
                 </div>
             </div>
 
-            {/* Danh sách Thẻ Ghi chú */}
             <div className="notes-grid">
                 {filteredNotes.length === 0 && (
                     <p style={{ color: '#64748b', gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
-                        {notes.length === 0 ? 'Chưa có ghi chú nào trong chủ đề này.' : 'Không tìm thấy ghi chú phù hợp.'}
+                        {notes.length === 0 ? 'Chưa có ghi chú nào trong danh mục này.' : 'Không tìm thấy ghi chú phù hợp.'}
                     </p>
                 )}
                 {filteredNotes.map(note => (

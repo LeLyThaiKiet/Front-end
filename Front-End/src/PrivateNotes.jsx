@@ -60,7 +60,7 @@ function PrivateNotes() {
     if (!isUnlocked) {
         return (
             <div style={{ maxWidth: '400px', margin: '80px auto' }} className="card-form">
-                <h2 style={{ textAlign: 'center', marginBottom: '16px', color: '#dc2626' }}>🔒 Vùng Bảo Mật</h2>
+                <h2 style={{ textAlign: 'center', marginBottom: '16px', color: '#dc2626' }}>Vùng Bảo Mật</h2>
                 <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>Vui lòng nhập mật khẩu riêng tư để mở khóa.</p>
                 <input 
                     type="password"
@@ -76,10 +76,10 @@ function PrivateNotes() {
 
     return (
         <div>
-            <h2 style={{ color: '#dc2626', marginBottom: '24px' }}>🔒 Ghi chú Mật (Private Notes)</h2>
+            <h2 style={{ color: '#dc2626', marginBottom: '24px' }}>Ghi chú Mật</h2>
             
             <div className="card-form" style={{ borderTop: '4px solid #dc2626' }}>
-                <h3>{formData.id ? '✏️ Sửa ghi chú kín' : '➕ Thêm ghi chú bí mật'}</h3>
+                <h3>{formData.id ? 'Sửa ghi chú kín' : 'Thêm ghi chú bí mật'}</h3>
                 <input 
                     className="input-field"
                     placeholder="Tiêu đề bí mật..." 
