@@ -3,7 +3,17 @@
 Ứng dụng web quản lý ghi chú hiện đại được xây dựng theo mô hình Full-stack sử dụng ReactJS cho phía giao diện (Frontend) và Node.js/Express cho phía máy chủ (Backend). Hệ thống hỗ trợ lưu trữ cục bộ qua file JSON, quản lý danh mục linh hoạt, tùy chỉnh giao diện (Sáng/Tối, Màu chủ đạo) và phân tách độc lập giữa kho ghi chú công khai và Vùng riêng tư (Private Notes) được bảo mật bằng tài khoản mật khẩu.
 
 ---
+**Giảng viên hướng dẫn:** Nguyễn Hoàng Việt  
+  
 
+### 👥 Thành viên thực hiện:
+1. **Lê Minh Tài** - MSSV: 0306241145
+   - **Vai trò:** Project Manager (PM), Frontend Lead & QA/Tester
+   - **Mức độ đóng góp:** 100%
+2. **Lê Lý Thái Kiệt** - MSSV: 0306241122
+   - **Vai trò:** Backend Architect & Data Engineer
+   - **Mức độ đóng góp:** 100
+---
 ## 💻 Yêu Cầu Hệ Thống
 - Cần cài đặt **Node.js** phiên bản 16+ trở lên.
 
