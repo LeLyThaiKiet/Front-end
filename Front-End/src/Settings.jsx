@@ -1,43 +1,31 @@
 import React, { useState, useEffect } from 'react';
 
-function Settings() {
+function Settings({ onSettingsUpdated }) {
     const [profile, setProfile] = useState({ 
-        displayName: '', 
         theme: 'light', 
         primaryColor: '#2563eb', 
         categories: ['hoc-tap', 'cong-viec', 'ca-nhan'], 
-        password: '' 
+        accounts: { "admin": "123456", "sinhvien1": "123" }
     });
+    const [newUsername, setNewUsername] = useState('');
+    const [newPassword, setNewPassword] = useState('');
     const [newCategory, setNewCategory] = useState('');
 
     useEffect(() => {
         fetch('http://localhost:5000/api/profile')
             .then(res => res.json())
             .then(data => {
-                setProfile(data);
-                applySettings(data);
+                const { displayName, password, ...cleanProfile } = data;
+                if (!cleanProfile.accounts) cleanProfile.accounts = { "admin": "123456", "sinhvien1": "123" };
+                setProfile(cleanProfile);
             });
     }, []);
-
-    const applySettings = (data) => {
-        // Đổi màu chủ đạo toàn cục
-        document.documentElement.style.setProperty('--primary-color', data.primaryColor || '#2563eb');
-        
-        // Đổi theme sáng/tối
-        if (data.theme === 'dark') {
-            document.body.style.backgroundColor = '#0f172a';
-            document.body.style.color = '#f8fafc';
-        } else {
-            document.body.style.backgroundColor = '#f8fafc';
-            document.body.style.color = '#0f172a';
-        }
-    };
 
     const handleChange = (e) => {
         const updated = { ...profile, [e.target.name]: e.target.value };
         setProfile(updated);
         if (e.target.name === 'theme' || e.target.name === 'primaryColor') {
-            applySettings(updated);
+            if (onSettingsUpdated) onSettingsUpdated(updated);
         }
     };
 
@@ -49,8 +37,10 @@ function Settings() {
             return;
         }
         const updatedCategories = [...profile.categories, formattedCat];
-        setProfile({ ...profile, categories: updatedCategories });
+        const updatedProfile = { ...profile, categories: updatedCategories };
+        setProfile(updatedProfile);
         setNewCategory('');
+        if (onSettingsUpdated) onSettingsUpdated(updatedProfile);
     };
 
     const handleDeleteCategory = (catToDelete) => {
@@ -60,8 +50,38 @@ function Settings() {
         }
         if (window.confirm(`Bạn có chắc muốn xóa danh mục [${catToDelete}] không?`)) {
             const updatedCategories = profile.categories.filter(c => c !== catToDelete);
-            setProfile({ ...profile, categories: updatedCategories });
+            const updatedProfile = { ...profile, categories: updatedCategories };
+            setProfile(updatedProfile);
+            if (onSettingsUpdated) onSettingsUpdated(updatedProfile);
         }
+    };
+
+    const handleRegister = () => {
+        if (!newUsername.trim() || !newPassword.trim()) {
+            alert("Vui lòng nhập Tên tài khoản và Mật khẩu!");
+            return;
+        }
+
+        const updatedAccounts = { 
+            ...(profile.accounts || {}), 
+            [newUsername.trim().toLowerCase()]: newPassword.trim() 
+        };
+
+        const updatedProfile = { ...profile, accounts: updatedAccounts };
+
+        fetch('http://localhost:5000/api/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedProfile)
+        })
+        .then(res => res.json())
+        .then(() => {
+            setProfile(updatedProfile);
+            setNewUsername('');
+            setNewPassword('');
+            if (onSettingsUpdated) onSettingsUpdated(updatedProfile);
+            alert(`Đã đăng ký thành công tài khoản [${newUsername.trim().toLowerCase()}]!`);
+        });
     };
 
     const handleSave = () => {
@@ -71,7 +91,10 @@ function Settings() {
             body: JSON.stringify(profile)
         })
         .then(res => res.json())
-        .then(() => alert("Cập nhật cài đặt thành công!"));
+        .then(() => {
+            if (onSettingsUpdated) onSettingsUpdated(profile);
+            alert("Cập nhật cài đặt thành công!");
+        });
     };
 
     return (
@@ -79,8 +102,22 @@ function Settings() {
             <h2 style={{ marginBottom: '24px' }}>Cài đặt hệ thống</h2>
             
             <div className="card-form">
-                <label style={{ fontWeight: '600' }}>Tên hiển thị người dùng:</label>
-                <input className="input-field" name="displayName" value={profile.displayName} onChange={handleChange} />
+                <label style={{ fontWeight: '600' }}>Tên tài khoản mới (Username):</label>
+                <input 
+                    className="input-field" 
+                    value={newUsername} 
+                    onChange={(e) => setNewUsername(e.target.value)} 
+                    placeholder="Nhập tên tài khoản..."
+                />
+
+                <label style={{ fontWeight: '600' }}>Mật khẩu tài khoản:</label>
+                <input 
+                    className="input-field" 
+                    type="password" 
+                    value={newPassword} 
+                    onChange={(e) => setNewPassword(e.target.value)} 
+                    placeholder="Nhập mật khẩu..."
+                />
 
                 <label style={{ fontWeight: '600' }}>Chế độ Giao diện (Theme):</label>
                 <select className="select-field" name="theme" value={profile.theme} onChange={handleChange}>
@@ -105,7 +142,7 @@ function Settings() {
                     <input 
                         className="input-field" 
                         style={{ margin: 0 }}
-                        placeholder="Thêm danh mục mới (VD: du-an)..." 
+                        placeholder="Thêm danh mục mới..." 
                         value={newCategory}
                         onChange={(e) => setNewCategory(e.target.value)}
                     />
@@ -114,17 +151,21 @@ function Settings() {
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
                     {profile.categories && profile.categories.map(cat => (
-                        <span key={cat} style={{ background: '#e2e8f0', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span key={cat} style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {cat}
                             <button onClick={() => handleDeleteCategory(cat)} style={{ border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}>x</button>
                         </span>
                     ))}
                 </div>
 
-                <label style={{ fontWeight: '600' }}>Mật khẩu Vùng kín:</label>
-                <input className="input-field" type="password" name="password" value={profile.password} onChange={handleChange} placeholder="Chưa đặt mật khẩu..." />
-
-                <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginTop: '10px' }}>Lưu thay đổi</button>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                    <button className="btn btn-secondary" onClick={handleRegister} type="button" style={{ flex: 1 }}>
+                        Đăng ký tài khoản
+                    </button>
+                    <button className="btn btn-primary" onClick={handleSave} type="button" style={{ flex: 1 }}>
+                        Lưu cài đặt
+                    </button>
+                </div>
             </div>
         </div>
     );

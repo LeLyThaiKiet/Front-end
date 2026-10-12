@@ -9,22 +9,23 @@ app.use(express.json());
 
 const profilePath = path.join(__dirname, 'data', 'profile.json');
 const notesDir = path.join(__dirname, 'data', 'notes');
-const privateNotesFile = path.join(__dirname, 'data', 'private.json');
+const privateDir = path.join(__dirname, 'data', 'private_notes');
 
 if (!fs.existsSync(notesDir)) {
     fs.mkdirSync(notesDir, { recursive: true });
 }
-if (!fs.existsSync(privateNotesFile)) {
-    fs.writeFileSync(privateNotesFile, '[]', 'utf8');
+if (!fs.existsSync(privateDir)) {
+    fs.mkdirSync(privateDir, { recursive: true });
 }
 
-// Khởi tạo profile mặc định có kèm danh mục và màu sắc
 const defaultProfile = {
-    displayName: "Sinh viên",
     theme: "light",
     primaryColor: "#2563eb",
     categories: ["hoc-tap", "cong-viec", "ca-nhan"],
-    password: ""
+    accounts: {
+        "admin": "123456",
+        "sinhvien1": "123"
+    }
 };
 
 if (!fs.existsSync(profilePath)) {
@@ -32,10 +33,15 @@ if (!fs.existsSync(profilePath)) {
 }
 
 const getFilePath = (topic) => path.join(notesDir, `${topic}.json`);
+const getPrivateFilePath = (username) => {
+    const safeName = (username || 'admin').replace(/[^a-zA-Z0-9-_]/g, '_');
+    return path.join(privateDir, `${safeName}.json`);
+};
 
-// 1. API Profile
+// ================= 1. API PROFILE =================
 app.get('/api/profile', (req, res) => {
     try {
+        if (!fs.existsSync(profilePath)) return res.json(defaultProfile);
         const rawData = fs.readFileSync(profilePath, 'utf8');
         if (!rawData.trim()) return res.json(defaultProfile);
         res.json(JSON.parse(rawData));
@@ -54,7 +60,7 @@ app.put('/api/profile', (req, res) => {
     }
 });
 
-// 2. API Ghi chú công khai (CRUD)
+// ================= 2. API GHI CHÚ CÔNG KHAI (CRUD) =================
 app.get('/api/notes/:topic', (req, res) => {
     const filePath = getFilePath(req.params.topic);
     try {
@@ -120,24 +126,40 @@ app.delete('/api/notes/:topic/:id', (req, res) => {
     }
 });
 
-// 3. API Vùng kín & Xác thực
+// ================= 3. API XÁC THỰC VÙNG RIÊNG TƯ =================
 app.post('/api/private/auth', (req, res) => {
     try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ success: false, message: "Vui lòng nhập tài khoản và mật khẩu!" });
+        }
+
         const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
-        if (profile.password === req.body.password) {
-            res.json({ success: true });
+        const accounts = profile.accounts || {};
+
+        const cleanInputUser = String(username).trim().toLowerCase();
+        const cleanInputPass = String(password).trim();
+
+        // Tìm kiếm tài khoản không phân biệt chữ hoa/thường
+        const foundKey = Object.keys(accounts).find(
+            acc => acc.trim().toLowerCase() === cleanInputUser
+        );
+
+        if (foundKey && String(accounts[foundKey]).trim() === cleanInputPass) {
+            return res.json({ success: true, username: foundKey });
         } else {
-            res.status(401).json({ success: false, message: "Sai mật khẩu!" });
+            return res.status(401).json({ success: false, message: "Sai mật khẩu hoặc tài khoản không tồn tại!" });
         }
     } catch (error) {
         res.status(500).json({ message: "Lỗi hệ thống xác thực" });
     }
 });
 
-app.get('/api/private/notes', (req, res) => {
+app.get('/api/private/notes/:username', (req, res) => {
+    const filePath = getPrivateFilePath(req.params.username);
     try {
-        if (!fs.existsSync(privateNotesFile)) return res.json([]);
-        const data = fs.readFileSync(privateNotesFile, 'utf8');
+        if (!fs.existsSync(filePath)) return res.json([]);
+        const data = fs.readFileSync(filePath, 'utf8');
         if (!data.trim()) return res.json([]);
         res.json(JSON.parse(data));
     } catch (error) {
@@ -145,11 +167,12 @@ app.get('/api/private/notes', (req, res) => {
     }
 });
 
-app.post('/api/private/notes', (req, res) => {
+app.post('/api/private/notes/:username', (req, res) => {
+    const filePath = getPrivateFilePath(req.params.username);
     try {
         let notes = [];
-        if (fs.existsSync(privateNotesFile)) {
-            const fileData = fs.readFileSync(privateNotesFile, 'utf8');
+        if (fs.existsSync(filePath)) {
+            const fileData = fs.readFileSync(filePath, 'utf8');
             if (fileData.trim()) notes = JSON.parse(fileData);
         }
         const newNote = {
@@ -160,22 +183,23 @@ app.post('/api/private/notes', (req, res) => {
             updatedAt: new Date().toISOString()
         };
         notes.push(newNote);
-        fs.writeFileSync(privateNotesFile, JSON.stringify(notes, null, 2), 'utf8');
+        fs.writeFileSync(filePath, JSON.stringify(notes, null, 2), 'utf8');
         res.json({ success: true, note: newNote });
     } catch (error) {
         res.status(500).json({ message: "Lỗi thêm ghi chú kín" });
     }
 });
 
-app.put('/api/private/notes/:id', (req, res) => {
+app.put('/api/private/notes/:username/:id', (req, res) => {
+    const filePath = getPrivateFilePath(req.params.username);
     try {
-        let notes = JSON.parse(fs.readFileSync(privateNotesFile, 'utf8'));
+        let notes = JSON.parse(fs.readFileSync(filePath, 'utf8'));
         const index = notes.findIndex(n => n.id === req.params.id);
         if (index !== -1) {
             notes[index].title = req.body.title;
             notes[index].content = req.body.content;
             notes[index].updatedAt = new Date().toISOString();
-            fs.writeFileSync(privateNotesFile, JSON.stringify(notes, null, 2), 'utf8');
+            fs.writeFileSync(filePath, JSON.stringify(notes, null, 2), 'utf8');
             return res.json({ success: true, message: "Đã sửa thành công" });
         }
         res.status(404).json({ message: "Không tìm thấy ghi chú" });
@@ -184,11 +208,12 @@ app.put('/api/private/notes/:id', (req, res) => {
     }
 });
 
-app.delete('/api/private/notes/:id', (req, res) => {
+app.delete('/api/private/notes/:username/:id', (req, res) => {
+    const filePath = getPrivateFilePath(req.params.username);
     try {
-        let notes = JSON.parse(fs.readFileSync(privateNotesFile, 'utf8'));
+        let notes = JSON.parse(fs.readFileSync(filePath, 'utf8'));
         const newNotes = notes.filter(n => n.id !== req.params.id);
-        fs.writeFileSync(privateNotesFile, JSON.stringify(newNotes, null, 2), 'utf8');
+        fs.writeFileSync(filePath, JSON.stringify(newNotes, null, 2), 'utf8');
         res.json({ success: true, message: "Đã xóa thành công" });
     } catch (error) {
         res.status(500).json({ message: "Lỗi xóa ghi chú kín" });

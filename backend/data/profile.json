@@ -1,5 +1,14 @@
 {
-  "displayName": "Sinh viên",
-  "theme": "light",
-  "password": "thaikiet"
+  "theme": "dark",
+  "primaryColor": "#2563eb",
+  "categories": [
+    "hoc-tap",
+    "cong-viec",
+    "ca-nhan"
+  ],
+  "accounts": {
+    "admin": "123456",
+    "thaikiet": "123",
+    "leminhtai": "123"
+  }
 }
